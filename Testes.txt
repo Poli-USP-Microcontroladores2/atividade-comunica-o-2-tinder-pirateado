@@ -1,0 +1,10 @@
+Sent utf8 encoded message: "Teste 1\r" ----
+Echo: Teste 1 
+
+Sent utf8 encoded message: "\r" ----
+
+Sent utf8 encoded message: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\r" ----
+Echo: ABCDEFGHIJKLMNOPQRSTUVWXYZ01234
+
+Sent utf8 encoded message: "@#%&*!~çÇáÁêÊ\r" ----
+Echo: @#%&*!~çÇáÁêÊ
