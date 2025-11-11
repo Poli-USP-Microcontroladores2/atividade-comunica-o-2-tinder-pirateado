@@ -1,92 +1,107 @@
+/*
+ * Copyright (c) 2022 Libre Solar Technologies GmbH
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
-#include <zephyr/drivers/gpio.h>
-#include <zephyr/sys/printk.h>
+#include <zephyr/drivers/uart.h>
 
-#define NUM_FILOSOFOS 5
-#define PENSAR_MS 4000
-#define COMER_MS 2500
+#include <string.h>
 
-// --- LEDs RGB padrão da FRDM-KL25Z ---
-static const struct gpio_dt_spec led_r = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
-static const struct gpio_dt_spec led_g = GPIO_DT_SPEC_GET(DT_ALIAS(led1), gpios);
-static const struct gpio_dt_spec led_b = GPIO_DT_SPEC_GET(DT_ALIAS(led2), gpios);
+/* change this to any other UART peripheral if desired */
+#define UART_DEVICE_NODE DT_CHOSEN(zephyr_shell_uart)
 
-// --- Mutexes (um por garfo) ---
-static struct k_mutex garfos[NUM_FILOSOFOS];
+#define MSG_SIZE 32
 
-// --- Controle de LEDs (estado de quem está comendo) ---
-void set_leds(int r, int g, int b) {
-    gpio_pin_set_dt(&led_r, r);
-    gpio_pin_set_dt(&led_g, g);
-    gpio_pin_set_dt(&led_b, b);
+/* queue to store up to 10 messages (aligned to 4-byte boundary) */
+K_MSGQ_DEFINE(uart_msgq, MSG_SIZE, 10, 4);
+
+static const struct device *const uart_dev = DEVICE_DT_GET(UART_DEVICE_NODE);
+
+/* receive buffer used in UART ISR callback */
+static char rx_buf[MSG_SIZE];
+static int rx_buf_pos;
+
+/*
+ * Read characters from UART until line end is detected. Afterwards push the
+ * data to the message queue.
+ */
+void serial_cb(const struct device *dev, void *user_data)
+{
+	uint8_t c;
+
+	if (!uart_irq_update(uart_dev)) {
+		return;
+	}
+
+	if (!uart_irq_rx_ready(uart_dev)) {
+		return;
+	}
+
+	/* read until FIFO empty */
+	while (uart_fifo_read(uart_dev, &c, 1) == 1) {
+		if ((c == '\n' || c == '\r') && rx_buf_pos > 0) {
+			/* terminate string */
+			rx_buf[rx_buf_pos] = '\0';
+
+			/* if queue is full, message is silently dropped */
+			k_msgq_put(&uart_msgq, &rx_buf, K_NO_WAIT);
+
+			/* reset the buffer (it was copied to the msgq) */
+			rx_buf_pos = 0;
+		} else if (rx_buf_pos < (sizeof(rx_buf) - 1)) {
+			rx_buf[rx_buf_pos++] = c;
+		}
+		/* else: characters beyond buffer size are dropped */
+	}
 }
 
-void atualizar_leds(int filosofo, bool comendo) {
-    static bool estado[NUM_FILOSOFOS] = {false, false, false, false, false};
-    estado[filosofo] = comendo;
+/*
+ * Print a null-terminated string character by character to the UART interface
+ */
+void print_uart(char *buf)
+{
+	int msg_len = strlen(buf);
 
-    int r = 0, g = 0, b = 0;
-
-    if (estado[0]) r = 1;             // Filósofo 1 → vermelho
-    if (estado[1]) g = 1;             // Filósofo 2 → verde
-    if (estado[2]) b = 1;             // Filósofo 3 → azul
-    if (estado[3]) { r = 1; g = 1; }  // Filósofo 4 → amarelo
-    if (estado[4]) { g = 1; b = 1; }  // Filósofo 5 → ciano
-
-    set_leds(r, g, b);
+	for (int i = 0; i < msg_len; i++) {
+		uart_poll_out(uart_dev, buf[i]);
+	}
 }
 
-// --- Função principal de cada filósofo ---
-void filosofo(void *p1, void *p2, void *p3) {
-    int id = (int)(intptr_t)p1;
-    int esq = id;
-    int dir = (id + 1) % NUM_FILOSOFOS;
+int main(void)
+{
+	char tx_buf[MSG_SIZE];
 
-    while (1) {
-        printk("🤔 Filósofo %d está pensando...\n", id + 1);
-        k_msleep(PENSAR_MS + id * 400);
+	if (!device_is_ready(uart_dev)) {
+		printk("UART device not found!");
+		return 0;
+	}
 
-        // Evita deadlock: o último filósofo pega na ordem inversa
-        if (id == NUM_FILOSOFOS - 1) {
-            k_mutex_lock(&garfos[dir], K_FOREVER);
-            k_mutex_lock(&garfos[esq], K_FOREVER);
-        } else {
-            k_mutex_lock(&garfos[esq], K_FOREVER);
-            k_mutex_lock(&garfos[dir], K_FOREVER);
-        }
+	/* configure interrupt and callback to receive data */
+	int ret = uart_irq_callback_user_data_set(uart_dev, serial_cb, NULL);
 
-        printk("🍝 Filósofo %d está COMENDO\n", id + 1);
-        atualizar_leds(id, true);
-        k_msleep(COMER_MS + id * 300);
+	if (ret < 0) {
+		if (ret == -ENOTSUP) {
+			printk("Interrupt-driven UART API support not enabled\n");
+		} else if (ret == -ENOSYS) {
+			printk("UART device does not support interrupt-driven API\n");
+		} else {
+			printk("Error setting UART callback: %d\n", ret);
+		}
+		return 0;
+	}
+	uart_irq_rx_enable(uart_dev);
 
-        // Solta os garfos
-        k_mutex_unlock(&garfos[esq]);
-        k_mutex_unlock(&garfos[dir]);
-        atualizar_leds(id, false);
+	print_uart("Hello! I'm your echo bot.\r\n");
+	print_uart("Tell me something and press enter:\r\n");
 
-        printk("😌 Filósofo %d terminou de comer\n\n", id + 1);
-        k_msleep(800);
-    }
-}
-
-// --- Criação das threads ---
-K_THREAD_DEFINE(f1_id, 512, filosofo, (void *)0, NULL, NULL, 5, 0, 0);
-K_THREAD_DEFINE(f2_id, 512, filosofo, (void *)1, NULL, NULL, 5, 0, 0);
-K_THREAD_DEFINE(f3_id, 512, filosofo, (void *)2, NULL, NULL, 5, 0, 0);
-K_THREAD_DEFINE(f4_id, 512, filosofo, (void *)3, NULL, NULL, 5, 0, 0);
-K_THREAD_DEFINE(f5_id, 512, filosofo, (void *)4, NULL, NULL, 5, 0, 0);
-
-void main(void) {
-    printk("\n=== 🍽️ PROBLEMA DOS FILÓSOFOS (Mutex — Zephyr + FRDM-KL25Z) ===\n\n");
-
-    // Inicializa GPIOs
-    gpio_pin_configure_dt(&led_r, GPIO_OUTPUT_INACTIVE);
-    gpio_pin_configure_dt(&led_g, GPIO_OUTPUT_INACTIVE);
-    gpio_pin_configure_dt(&led_b, GPIO_OUTPUT_INACTIVE);
-
-    // Inicializa mutexes (garfos)
-    for (int i = 0; i < NUM_FILOSOFOS; i++) {
-        k_mutex_init(&garfos[i]);
-    }
+	/* indefinitely wait for input from the user */
+	while (k_msgq_get(&uart_msgq, &tx_buf, K_FOREVER) == 0) {
+		print_uart("Echo: ");
+		print_uart(tx_buf);
+		print_uart("\r\n");
+	}
+	return 0;
 }
