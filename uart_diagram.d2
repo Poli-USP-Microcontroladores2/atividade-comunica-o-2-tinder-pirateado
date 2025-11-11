@@ -1,0 +1,21 @@
+shape: sequence_diagram
+
+App -> UART_Driver: uart_irq_callback_user_data_set()
+UART_Driver -> UART_Hardware: uart_irq_rx_enable()
+
+note over UART_Hardware: UART pronta para receber dados
+
+User -> UART_Hardware: Digita caracteres (via RX)
+UART_Hardware -> UART_Driver: Interrupção RX (serial_cb)
+UART_Driver -> UART_Driver: uart_fifo_read() (lê byte por byte)
+UART_Driver -> UART_Driver: Detecta '\\n' ou '\\r' → fim de linha
+UART_Driver -> k_msgq: k_msgq_put(rx_buf)
+
+note over k_msgq: Mensagem armazenada na fila
+
+App -> k_msgq: k_msgq_get(tx_buf, K_FOREVER)
+k_msgq -> App: Mensagem recebida
+
+App -> UART_Driver: print_uart("Echo: " + msg)
+UART_Driver -> UART_Hardware: uart_poll_out()
+UART_Hardware -> User: "Echo: <mensagem digitada>"
