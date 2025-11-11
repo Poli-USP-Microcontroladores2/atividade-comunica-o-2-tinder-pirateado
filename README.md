@@ -40,15 +40,27 @@ Link usado como referência:
 
 ### CT1 – Eco básico
 
-* Entrada:
-* Saída esperada:
-* Critério de Aceitação:
+* Entrada: Teste 1 
+* Saída esperada: Teste 1
+* Critério de Aceitação: Ao enviar a mensagem Teste 1, o monitor serial deve printar exatamente a mesma mensagem
 
 ### CT2 – Linha vazia
 
+* Entrada: Acionar a tecla ENTER
+* Saída esperada: Uma mensagem vazia
+* Critério de Aceitação: Ao acionar a tecla ENTER, o monitor serial não mandará mensagem alguma por causa da linha de código rx_buf_pos > 0.
+
 ### CT3 – Linha longa
 
-(Adicionar mais casos se necessário.)
+* Entrada: Uma mensagem com mais de 31 caracteres. Ex "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+* Saída esperada: A mesma mensagem, porém com os caracteres maiores que 31 excluídos. Nesse caso, ABCDEFGHIJKLMNOPQRSTUVWXYZ01234
+* Critério de Aceitação: O sistema deve truncar o texto ao tamanho máximo do rx_buf (MSG_SIZE - 1), ignorando o restante sem travar nem corromper a fila.
+
+### CT4 - Caracteres especiais
+
+* Entrada: @#%&*!~çÇáÁêÊ
+* Saída esperada: Echo: @#%&*!~çÇáÁêÊ
+* Critério de Aceitação: O sistema deve ecoar corretamente todos os caracteres especiais e acentuados, preservando sua integridade e ordem, sem substituí-los por símbolos incorretos (como “?”) e sem causar travamento no envio.
 
 ## 3.3 Implementação
 
