@@ -102,11 +102,81 @@ Link usado como referência:
 
 ## 4.2 Casos de Teste Planejados (TDD)
 
-### CT1 – Transmissão de pacotes a cada 5s
+✅ CT1 – Transmissão de pacotes a cada 5 s
 
-### CT2 – Recepção
+Objetivo:
+Verificar se o dispositivo envia corretamente a mensagem "Arerê o Santos vai jogar a Série B" durante o período ativo de transmissão.
 
-### CT3 – Verificação de timing dos 5s
+Procedimento:
+
+Conecte a FRDM-KL25Z ao PC e abra o monitor serial (por exemplo, 115200 bps).
+
+Reinicie a placa.
+
+Observe no terminal:
+
+O log "[Modo Envio - 5s]" aparece.
+
+Durante cerca de 5 s, são transmitidas várias linhas com o texto definido.
+
+Após esse tempo, o log muda para "[Modo Recepção - 5s]".
+Nenhum envio deve ocorrer nesse período.
+
+Resultado esperado:
+
+Pelo menos 8–10 mensagens do texto são enviadas (uma a cada 0,5 s).
+
+Não há envio fora da janela de 5 s.
+
+O ciclo recomeça após 10 s (envio → recepção → envio...).
+
+✅ CT2 – Recepção
+
+Objetivo:
+Confirmar se o firmware recebe corretamente mensagens UART e as imprime durante o modo de recepção.
+
+Procedimento:
+
+Aguarde o log "[Modo Recepção - 5s]".
+
+Digite no terminal serial uma mensagem curta (por exemplo, "teste123").
+
+Pressione Enter.
+
+Resultado esperado:
+O firmware responde imediatamente com:
+
+Recebido: teste123
+
+
+Cada linha enviada manualmente deve gerar uma resposta com o prefixo "Recebido:".
+
+Durante o modo de envio, as mensagens digitadas não devem ser respondidas (porque o firmware está transmitindo, não lendo).
+
+✅ CT3 – Verificação de timing dos 5 s
+
+Objetivo:
+Validar que cada modo (envio e recepção) dura aproximadamente 5 s.
+
+Procedimento:
+
+Observe no terminal os logs alternando entre:
+
+[Modo Envio - 5s]
+[Modo Recepção - 5s]
+
+
+Use um cronômetro (ou registre timestamps no monitor serial).
+
+Meça o tempo entre dois logs consecutivos do mesmo tipo (por exemplo, entre dois “[Modo Envio - 5s]”).
+
+Resultado esperado:
+
+Cada fase dura 5 ± 0.2 s.
+
+O ciclo completo (envio + recepção) dura aprox. 10 s.
+
+As transições são regulares e contínuas.
 
 (Adicionar mais casos se necessário.)
 
