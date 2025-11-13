@@ -1,7 +1,7 @@
 /*
  * Echo bot adaptado — alterna entre modo de envio e recepção a cada 5 segundos.
  *
- * Envia: "Palmeiras não tem mundial, vai Corinthians"
+ * Envia: "Arerê o Santos vai jogar a Série B"
  * Recebe: imprime mensagens que chegam pela UART.
  */
 
