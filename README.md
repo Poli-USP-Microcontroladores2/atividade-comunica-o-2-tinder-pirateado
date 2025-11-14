@@ -69,26 +69,22 @@ Link usado como referência:
 
 ## 3.4 Evidências de Funcionamento
 
-Salvar evidências em `docs/evidence/echo_bot/`.
+Sent utf8 encoded message: "Teste 1\r" ----
+Echo: Teste 1 
 
-Exemplo de referência no README:
+Sent utf8 encoded message: "\r" ----
 
-```
-[Link para o log CT1](docs/evidence/echo_bot/ct1_output.txt)
-```
 
-Adicionar aqui pequenos trechos ilustrativos:
+Sent utf8 encoded message: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\r" ----
+Echo: ABCDEFGHIJKLMNOPQRSTUVWXYZ01234
 
-```
-Hello! I'm your echo bot. Tell me something and press enter:
-Echo: Hello World!
+Sent utf8 encoded message: "@#%&*!~çÇáÁêÊ\r" ----
+Echo: @#%&*!~çÇáÁêÊ
 ```
 
 ## 3.5 Diagramas de Sequência D2
 
-Vide material de apoio: https://d2lang.com/tour/sequence-diagrams/
-
-Adicionar arquivos (diagrama completo e o código-base para geração do diagrama) em `docs/sequence-diagrams/`.
+Arquivo "uart_diagram.d2"
 
 ---
 
@@ -186,33 +182,41 @@ As transições são regulares e contínuas.
 * Motivos/Justificativas:
 
 ## 4.4 Evidências de Funcionamento
-
-Salvar em `docs/evidence/async_api/`.
-
-Exemplo:
-
+CT1:
+[Iniciando transmissão - 5s]
+Arerê o Santos vai jogar a Série B
+Arerê o Santos vai jogar a Série B
+Arerê o Santos vai jogar a Série B
+Arerê o Santos vai jogar a Série B
+Arerê o Santos vai jogar a Série B
+Arerê o Santos vai jogar a Série B
+Arerê o Santos vai jogar a Série B
+Arerê o Santos vai jogar a Série B
+Arerê o Santos vai jogar a Série B
+Arerê o Santos vai jogar a Série B
+[Transmissão encerrada - 10 mensagens]
+[Pausa de 5s - sem transmissão]
 ```
-Loop 0:
-Sending 3 packets (packet size: 5)
-Packet: 0
-Packet: 1
-Packet: 2
-```
+CT2: [Mensagem recebida]: Clube de regatas vasco da gama
 
-Ou:
+CT3: [CICLO 2] MODO: RECEPÇÃO
+[Tempo real do ciclo]: 5008 ms
 
-```
-RX is now enabled
-UART callback: RX_RDY
-Data (HEX): 48 65 6C 6C 6F
-Data (ASCII): Hello
-```
-
+[CICLO 3] MODO: TRANSMISSÃO
+Arer�� o Santos vai jogar a Série B
+Arerê o Santos vai jogar a Série B
+Arerê o Santos vai jogar a Série B
+Arerê o Santos vai jogar a Série B
+Arerê o Santos vai jogar a Série B
+Arerê o Santos vai jogar a S��rie B
+Arerê o Santos vai jogar a Série B
+Arerê o Santos vai jogar a Série B
+Arerê o Santos vai jogar a Série B
+Arerê o Santos vai jogar a Série B
+[Tempo real do ciclo]: 5005 ms
 ## 4.5 Diagramas de Sequência D2
 
-Vide material de referência: https://d2lang.com/tour/sequence-diagrams/
-
-Adicionar arquivos (diagrama completo e o código-base para geração do diagrama) em `docs/sequence-diagrams/`.
+Arquivo "UART_Async_flow.d2"
 
 ---
 
